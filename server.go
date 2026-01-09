@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"sync"
 )
 
 type FileServerOpts struct {
@@ -16,8 +17,10 @@ type FileServerOpts struct {
 }
 type FileServer struct {
 	FileServerOpts
-	store  *Store
-	quitch chan struct{} // quit channel
+	peerLock sync.Mutex
+	peers    map[string]p2p.Peer
+	store    *Store
+	quitch   chan struct{} // quit channel
 }
 
 func NewFileServer(opts FileServerOpts) *FileServer {
@@ -29,11 +32,20 @@ func NewFileServer(opts FileServerOpts) *FileServer {
 		store:          NewStore(storeOpts),
 		FileServerOpts: opts,
 		quitch:         make(chan struct{}),
+		peers:          make(map[string]p2p.Peer),
 	}
 }
 
 func (s *FileServer) Stop() {
 	close(s.quitch)
+}
+
+func (s *FileServer) OnPeer(peer p2p.Peer) error {
+	s.peerLock.Lock()
+	defer s.peerLock.Unlock()
+	s.peers[peer.RemoteAddr().String()] = peer
+	fmt.Printf("connected with remote %s", peer.RemoteAddr().String())
+	return nil
 }
 
 func (s *FileServer) loop() {

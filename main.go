@@ -38,4 +38,7 @@ func main() {
 		log.Fatal(s1.Start())
 	}()
 	s2.Start()
+
+	// data := bytes.NewReader([]byte("my big data file here"))
+	// s2.StoreFile("myprivatedata", data)
 }

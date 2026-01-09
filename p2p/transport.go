@@ -4,8 +4,9 @@ import "net"
 
 // Peer is an interface that represents the remote node
 type Peer interface {
-	Send([]byte) error
-	Close() error
+	// Send([]byte) error
+	// Close() error
+	net.Conn
 	RemoteAddr() net.Addr
 	// Consume() <-chan RPC
 }

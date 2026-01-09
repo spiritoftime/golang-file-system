@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/gob"
 	"file_system/p2p"
 	"fmt"
@@ -37,11 +38,6 @@ func NewFileServer(opts FileServerOpts) *FileServer {
 	}
 }
 
-type Payload struct {
-	Key  string
-	Data []byte
-}
-
 func (s *FileServer) broadcast(p Payload) error {
 	peers := []io.Writer{}
 
@@ -52,10 +48,31 @@ func (s *FileServer) broadcast(p Payload) error {
 	return gob.NewEncoder(mw).Encode(p)
 }
 
+type Payload struct {
+	Key  string
+	Data []byte
+}
+
 func (s *FileServer) StoreData(key string, r io.Reader) error {
 	//  1. Store this file to disk
 	// 2. broadcast this file to all known peers in the network
+	fmt.Println("i am writing some thing")
+	if err := s.store.Write(key, r); err != nil {
+		fmt.Println("i am under the water")
+
+		return err
+	}
+	// the reader is empty because we completely read and wrote
+	buf := new(bytes.Buffer)
+	_, err := io.Copy(buf, r)
+	if err != nil {
+		return err
+	}
+	fmt.Println(buf.String())
+
+	// the reader is empty
 	return nil
+
 }
 
 func (s *FileServer) Stop() {

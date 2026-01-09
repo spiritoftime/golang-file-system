@@ -137,18 +137,11 @@ func (s *Store) writeStream(key string, r io.Reader) error {
 		return err
 	}
 
-	// buf := new(bytes.Buffer)
-	// io.Copy(buf, r)
-
-	// filenameBytes := md5.Sum(buf.Bytes())
-	// filename := hex.EncodeToString(filenameBytes[:])
-
 	fullpathWithRoot := fmt.Sprintf("%s/%s", s.Root, pathKey.FullPath())
 	f, err := os.Create(fullpathWithRoot)
 	if err != nil {
 		return err
 	}
-	// n, err := io.Copy(f, buf)
 	n, err := io.Copy(f, r)
 	if err != nil {
 		return err

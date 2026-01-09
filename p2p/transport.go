@@ -6,7 +6,7 @@ import "net"
 type Peer interface {
 	// Send([]byte) error
 	// Close() error
-	net.Conn
+	net.Conn // it already implements the send close io.writer reader interfaces thats why no error
 	RemoteAddr() net.Addr
 	// Consume() <-chan RPC
 }

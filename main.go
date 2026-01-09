@@ -3,6 +3,7 @@ package main
 import (
 	"file_system/p2p"
 	"log"
+	"time"
 )
 
 // func OnPeer(peer p2p.Peer) error {
@@ -27,10 +28,13 @@ func main() {
 		Transport:         tcpTransport,
 	}
 	s := NewFileServer(fileServerOpts)
+	go func() {
+		time.Sleep(time.Second * 3)
+		s.Stop()
+	}()
 	if err := s.Start(); err != nil {
 		log.Fatal(err)
 	}
-	select {}
 	// tr := p2p.NewTCPTransport(":3000")
 	// tcpOpts := p2p.TCPTransportOpts{
 	// 	ListenAddr: ":3000",

@@ -3,7 +3,6 @@ package main
 import (
 	"file_system/p2p"
 	"log"
-	"time"
 )
 
 // func OnPeer(peer p2p.Peer) error {
@@ -12,9 +11,9 @@ import (
 // 	return nil
 // }
 
-func main() {
+func makeServer(listenAddr string, root string, nodes ...string) *FileServer {
 	tcpTransportOpts := p2p.TCPTransportOpts{
-		ListenAddr:    ":3000",
+		ListenAddr:    listenAddr,
 		HandshakeFunc: p2p.NOTHandshakeFunc,
 		Decoder:       p2p.DefaultDecoder{},
 		// TODO: OnPeer func
@@ -22,38 +21,19 @@ func main() {
 	}
 	tcpTransport := p2p.NewTCPTransport(tcpTransportOpts)
 	fileServerOpts := FileServerOpts{
-		ListenAddr:        ":3000",
-		StorageRoot:       "3000_network",
+		StorageRoot:       listenAddr + "_network",
 		PathTransformFunc: CASPathTransformFunc,
 		Transport:         tcpTransport,
+		BootstrapNodes:    nodes,
 	}
-	s := NewFileServer(fileServerOpts)
+	return NewFileServer(fileServerOpts)
+}
+
+func main() {
+	s1 := makeServer(":3000", "")
+	s2 := makeServer(":4000", ":3000")
 	go func() {
-		time.Sleep(time.Second * 3)
-		s.Stop()
+		log.Fatal(s1.Start())
 	}()
-	if err := s.Start(); err != nil {
-		log.Fatal(err)
-	}
-	// tr := p2p.NewTCPTransport(":3000")
-	// tcpOpts := p2p.TCPTransportOpts{
-	// 	ListenAddr: ":3000",
-
-	// 	HandshakeFunc: p2p.NOTHandshakeFunc,
-	// 	Decoder:       p2p.DefaultDecoder{},
-	// 	OnPeer:        OnPeer,
-	// }
-	// tr := p2p.NewTCPTransport(tcpOpts)
-	// go func() {
-	// 	for {
-	// 		msg := <-tr.Consume()
-	// 		fmt.Printf("%+v\n", msg)
-	// 	}
-	// }()
-	// if err := tr.ListenAndAccept(); err != nil {
-	// 	log.Fatal(err)
-	// }
-	// select {}
-
-	// fmt.Println("me Gucci")
+	s2.Start()
 }

@@ -62,6 +62,19 @@ func (t *TCPTransport) Consume() <-chan RPC {
 func (t *TCPTransport) Close() error {
 	return t.listener.Close()
 }
+
+// Dial implements the transport interface.
+func (t *TCPTransport) Dial(addr string) error {
+	conn, err := net.Dial("tcp", addr)
+	if err != nil {
+		log.Println("tcp dial error:", err)
+		return err
+	}
+	fmt.Println(conn)
+	go t.handleConn(conn, true) // outbound func
+	return nil
+
+}
 func (t *TCPTransport) ListenAndAccept() error {
 
 	var err error
@@ -86,19 +99,19 @@ func (t *TCPTransport) startAcceptLoop() {
 			fmt.Printf("TCP accept error: %s", err)
 		}
 		fmt.Printf("new incoming connection %+v\n", conn)
-		go t.handleConn(conn)
+		go t.handleConn(conn, false)
 	}
 }
 
 // type Temp struct{}
 
-func (t *TCPTransport) handleConn(conn net.Conn) {
+func (t *TCPTransport) handleConn(conn net.Conn, outbound bool) {
 	var err error
 	defer func() {
 		fmt.Printf("dropping peer connection: %s", err)
 		conn.Close()
 	}()
-	peer := NewTCPPeer(conn, true)
+	peer := NewTCPPeer(conn, outbound)
 	if err = t.HandshakeFunc(peer); err != nil { // perform handshake
 		// conn.Close()
 		// fmt.Printf("TCP handshake error: %s\n", err)

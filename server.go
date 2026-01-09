@@ -54,11 +54,49 @@ func (s *FileServer) loop() {
 	}
 }
 
+// set up a peer to peer network
+// A peer is an individual node/participant in the P2P network. Each peer can:
+
+// Send data to other peers
+// Receive data from other peers
+// Store data locally
+// Forward requests to other peers
+// Traditional Client-Server vs P2P
+// CLIENT-SERVER:
+// Client → Server ← Client
+// Client → Server ← Client
+// (all data flows through central server)
+
+// P2P:
+// Peer ↔ Peer
+//
+//	↕       ↕
+//
+// Peer ↔ Peer
+// (peers connect directly to each other)
+func (s *FileServer) bootstrapNetwork() error {
+	for _, addr := range s.BootstrapNodes {
+		if len(addr) == 0 { // someone passed in ""
+			continue
+		}
+		go func(addr string) {
+
+			if err := s.Transport.Dial(addr); err != nil {
+				log.Println("dial error: ", err)
+
+			}
+		}(addr)
+	}
+	return nil
+}
+
 func (s *FileServer) Start() error {
 	if err := s.Transport.ListenAndAccept(); err != nil {
 		return err
 	}
-
+	if len(s.BootstrapNodes) != 0 {
+		s.bootstrapNetwork()
+	}
 	s.loop()
 	return nil
 }

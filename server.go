@@ -12,6 +12,7 @@ type FileServerOpts struct {
 	StorageRoot       string
 	PathTransformFunc PathTransformFunc
 	Transport         p2p.Transport
+	BootstrapNodes    []string
 }
 type FileServer struct {
 	FileServerOpts
@@ -39,6 +40,7 @@ func (s *FileServer) loop() {
 
 	defer func() {
 		log.Println("file server stopped due to user quit action")
+		s.Transport.Close()
 
 	}()
 

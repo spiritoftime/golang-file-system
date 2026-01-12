@@ -1,10 +1,10 @@
 package main
 
 import (
-	"bytes"
 	"encoding/gob"
 	"file_system/p2p"
 	"fmt"
+	"io"
 	"log"
 	"strings"
 	"time"
@@ -40,7 +40,9 @@ func makeServer(listenAddr string, nodes ...string) *FileServer {
 // runs before main
 func init() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
+	// gob interface anything in any type needs to be declared
 	gob.Register(MessageStoreFile{})
+	gob.Register(MessageGetFile{})
 }
 func main() {
 
@@ -49,13 +51,22 @@ func main() {
 	go func() {
 		log.Fatal(s1.Start())
 	}()
-	time.Sleep(5 * time.Second)
+	time.Sleep(2 * time.Second)
 	go s2.Start()
-	time.Sleep(5 * time.Second)
-	data := bytes.NewReader([]byte("my big data file here"))
-	if err := s2.StoreData("myprivatedata", data); err != nil {
-		fmt.Println(err)
+	time.Sleep(2 * time.Second)
+	// data := bytes.NewReader([]byte("my big data file here"))
+	// if err := s2.Store("myprivatedata", data); err != nil {
+	// 	fmt.Println(err)
+	// }
+	// time.Sleep(10 * time.Second)
+	r, err := s2.Get("myprivatedata")
+	if err != nil {
+		log.Fatal(err)
 	}
-	time.Sleep(10 * time.Second)
+	b, err := io.ReadAll(r)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(string(b))
 	select {}
 }

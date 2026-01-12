@@ -53,6 +53,10 @@ func NewTCPTransport(opts TCPTransportOpts) *TCPTransport {
 	}
 }
 
+// func (t *TCPTransport) ListenAddr() string {
+// 	return t.listener.Addr().Network()
+// }
+
 // Consume implements the transport interface, which will return read-only channel for reading the incoming messages received from another peer in the network.
 func (t *TCPTransport) Consume() <-chan RPC {
 	return t.rpcch

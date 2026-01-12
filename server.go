@@ -38,17 +38,22 @@ func NewFileServer(opts FileServerOpts) *FileServer {
 	}
 }
 
-func (s *FileServer) broadcast(p Payload) error {
+func (s *FileServer) broadcast(msg *Message) error {
 	peers := []io.Writer{}
 
 	for _, peer := range s.peers {
 		peers = append(peers, peer)
 	}
 	mw := io.MultiWriter(peers...)
-	return gob.NewEncoder(mw).Encode(p)
+	return gob.NewEncoder(mw).Encode(msg)
 }
 
-type Payload struct {
+type Message struct {
+	From    string
+	Payload any
+}
+
+type DataMessage struct {
 	Key  string
 	Data []byte
 }
@@ -56,22 +61,26 @@ type Payload struct {
 func (s *FileServer) StoreData(key string, r io.Reader) error {
 	//  1. Store this file to disk
 	// 2. broadcast this file to all known peers in the network
+
+	buf := new(bytes.Buffer)
+
+	tee := io.TeeReader(r, buf)
 	fmt.Println("i am writing some thing")
-	if err := s.store.Write(key, r); err != nil {
+	if err := s.store.Write(key, tee); err != nil {
 		fmt.Println("i am under the water")
 
 		return err
 	}
-	// the reader is empty because we completely read and wrote
-	buf := new(bytes.Buffer)
-	_, err := io.Copy(buf, r)
-	if err != nil {
-		return err
-	}
-	fmt.Println(buf.String())
 
-	// the reader is empty
-	return nil
+	p := &DataMessage{
+		Key:  key,
+		Data: buf.Bytes(),
+	}
+
+	return s.broadcast(&Message{
+		From:    "todo",
+		Payload: p,
+	})
 
 }
 
@@ -98,11 +107,30 @@ func (s *FileServer) loop() {
 	for {
 		select {
 		case msg := <-s.Transport.Consume(): // receive and use the value
-			fmt.Println(msg)
+			var m Message
+			if err := gob.NewDecoder(bytes.NewReader(msg.Payload)).Decode(&m); err != nil {
+				log.Println(err)
+			}
+			if err := s.handleMessage(&m); err != nil {
+
+				log.Println(err)
+
+			}
+			// fmt.Printf("%+v\n", string(m.Payload.Data))
 		case <-s.quitch: // receive but ignore the value
 			return
 		}
 	}
+}
+
+func (s *FileServer) handleMessage(msg *Message) error {
+
+	switch v := msg.Payload.(type) {
+	case *DataMessage:
+
+		fmt.Printf("received data %+v\n", v)
+	}
+	return nil
 }
 
 // set up a peer to peer network

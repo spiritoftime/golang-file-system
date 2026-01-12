@@ -40,7 +40,7 @@ func makeServer(listenAddr string, nodes ...string) *FileServer {
 // runs before main
 func init() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
-	gob.Register(&DataMessage{})
+	gob.Register(MessageStoreFile{})
 }
 func main() {
 

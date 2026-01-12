@@ -1,13 +1,17 @@
 package p2p
 
-import "net"
+import (
+	"net"
+)
 
 // Peer is an interface that represents the remote node
 type Peer interface {
-	// Send([]byte) error
+	Send([]byte) error
 	// Close() error
 	net.Conn // it already implements the send close io.writer reader interfaces thats why no error
+	// *sync.WaitGroup
 	RemoteAddr() net.Addr
+
 	// Consume() <-chan RPC
 }
 

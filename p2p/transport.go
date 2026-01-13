@@ -11,7 +11,7 @@ type Peer interface {
 	net.Conn // it already implements the send close io.writer reader interfaces thats why no error
 	// *sync.WaitGroup
 	RemoteAddr() net.Addr
-
+	CloseStream()
 	// Consume() <-chan RPC
 }
 

@@ -53,13 +53,18 @@ type TCPTransport struct {
 func NewTCPTransport(opts TCPTransportOpts) *TCPTransport {
 	return &TCPTransport{
 		TCPTransportOpts: opts,
-		rpcch:            make(chan RPC),
+		rpcch:            make(chan RPC, 1024),
 	}
 }
 
 // func (t *TCPTransport) ListenAddr() string {
 // 	return t.listener.Addr().Network()
 // }
+
+// Addr implements the transport interface, returning the address the transport is accepting connections.
+func (t *TCPTransport) Addr() string {
+	return t.ListenAddr
+}
 
 // Consume implements the transport interface, which will return read-only channel for reading the incoming messages received from another peer in the network.
 func (t *TCPTransport) Consume() <-chan RPC {
@@ -129,8 +134,10 @@ func (t *TCPTransport) handleConn(conn net.Conn, outbound bool) {
 			return
 		}
 	}
+
+	// read loop - everytime there is message it will read decode, byte to channel. if streaming need to lock this read group, cannot open two read loops at once
 	for {
-		rpc := RPC{}
+		rpc := RPC{} // if you put this outside for loop rpc.Stream is always true, so it will keep adding and waiting
 		err = t.Decoder.Decode(conn, &rpc)
 		// fmt.Println(reflect.TypeOf(err))
 		// panic(err)
@@ -144,12 +151,15 @@ func (t *TCPTransport) handleConn(conn net.Conn, outbound bool) {
 		}
 
 		rpc.From = conn.RemoteAddr().String()
-		peer.Wg.Add(1)
-		fmt.Println("waiting till stream is done")
-		fmt.Printf("message: %+v\n", rpc)
+		if rpc.Stream {
+			peer.Wg.Add(1)
+			fmt.Printf("[%s] incoming stream, waiting...\n", conn.RemoteAddr())
+			peer.Wg.Wait()
+			fmt.Printf("[%s] stream closed, resuming read loop...\n", conn.RemoteAddr())
+			continue
+		}
+
 		t.rpcch <- rpc
-		peer.Wg.Wait()
-		fmt.Println("stream done, continuing normal read loop")
 
 	}
 }

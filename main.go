@@ -1,10 +1,10 @@
 package main
 
 import (
+	"bytes"
 	"encoding/gob"
 	"file_system/p2p"
 	"fmt"
-	"io"
 	"log"
 	"strings"
 	"time"
@@ -53,20 +53,25 @@ func main() {
 	}()
 	time.Sleep(2 * time.Second)
 	go s2.Start()
-	time.Sleep(2 * time.Second)
-	// data := bytes.NewReader([]byte("my big data file here"))
-	// if err := s2.Store("myprivatedata", data); err != nil {
-	// 	fmt.Println(err)
-	// }
+
+	for i := 0; i < 10; i++ {
+		data := bytes.NewReader([]byte("my big data file here"))
+		if err := s2.Store(fmt.Sprintf("myprivatedata_%d", i), data); err != nil {
+			fmt.Println(err)
+		}
+		//  need to sleep for http connection roundtrip
+		// time.Sleep(5 * time.Millisecond)
+
+	}
 	// time.Sleep(10 * time.Second)
-	r, err := s2.Get("myprivatedata")
-	if err != nil {
-		log.Fatal(err)
-	}
-	b, err := io.ReadAll(r)
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println(string(b))
+	// r, err := s2.Get("myprivatedata")
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// b, err := io.ReadAll(r)
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// fmt.Println(string(b))
 	select {}
 }

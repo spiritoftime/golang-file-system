@@ -19,6 +19,7 @@ type Peer interface {
 // between the nodes in the network. this can be of the form (TCP,UDP, websockets, ...)
 // 3 or 4 functions on a interface should be the maximum
 type Transport interface {
+	Addr() string
 	ListenAndAccept() error
 	Consume() <-chan RPC
 	Close() error

@@ -9,8 +9,11 @@ import (
 func TestNewEncryptionKey(t *testing.T) {
 	for i := 0; i < 10; i++ {
 
-		key := newEncryptionKey()
-		fmt.Println(key)
+		key, err := newEncryptionKey()
+		if err != nil {
+			t.Errorf("%s", err.Error())
+		}
+		fmt.Printf("key is %s", key)
 		for i := 0; i < len(key); i++ {
 			if key[i] == 0x0 {
 				t.Errorf("0 bytes")
@@ -23,8 +26,11 @@ func TestCopyEncryptDecrypt(t *testing.T) {
 	payload := "Foo not Bar"
 	src := bytes.NewReader([]byte(payload))
 	dst := new(bytes.Buffer)
-	key := newEncryptionKey()
-	_, err := copyEncrypt(key, src, dst)
+	key, err := newEncryptionKey()
+	if err != nil {
+		t.Error(err)
+	}
+	_, err = copyEncrypt(key, src, dst)
 	if err != nil {
 		t.Error(err)
 	}

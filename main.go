@@ -27,8 +27,12 @@ func makeServer(listenAddr string, nodes ...string) *FileServer {
 		// OnPeer: ,
 	}
 	tcpTransport := p2p.NewTCPTransport(tcpTransportOpts)
+	encKey, err := newEncryptionKey()
+	if err != nil {
+		fmt.Println(err)
+	}
 	fileServerOpts := FileServerOpts{
-		EncKey:            newEncryptionKey(),
+		EncKey:            encKey,
 		StorageRoot:       strings.TrimPrefix(listenAddr, ":") + "_network", // remove the :
 		PathTransformFunc: CASPathTransformFunc,
 		Transport:         tcpTransport,
@@ -70,7 +74,7 @@ func main() {
 		data := bytes.NewReader([]byte("my big data file here"))
 		s3.Store(key, data)
 		time.Sleep(200 * time.Millisecond)
-		if err := s3.store.Delete(key); err != nil {
+		if err := s3.store.Delete(s3.ID, key); err != nil {
 			log.Fatal(err)
 		}
 		// -----------get file

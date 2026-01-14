@@ -20,10 +20,13 @@ func hashKey(key string) string {
 	return hex.EncodeToString(hash[:])
 }
 
-func newEncryptionKey() []byte {
+func newEncryptionKey() ([]byte, error) {
 	keyBuf := make([]byte, 32)
-	io.ReadFull(rand.Reader, keyBuf)
-	return keyBuf
+	_, err := io.ReadFull(rand.Reader, keyBuf)
+	if err != nil {
+		return nil, err
+	}
+	return keyBuf, nil
 
 }
 

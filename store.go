@@ -109,6 +109,30 @@ func (s *Store) Write(key string, r io.Reader) (int64, error) {
 	return s.writeStream(key, r)
 }
 
+func (s *Store) WriteDecrypt(encKey []byte, key string, r io.Reader) (int64, error) {
+	// filesize and error
+	f, err := s.openFileForWriting(key)
+	if err != nil {
+		return 0, err
+	}
+	n, err := copyDecrypt(encKey, r, f)
+
+	return int64(n), err
+
+}
+
+func (s *Store) writeStream(key string, r io.Reader) (int64, error) {
+	f, err := s.openFileForWriting(key)
+	if err != nil {
+		return 0, err
+	}
+	defer f.Close() // --------- ADDED
+
+	return io.Copy(f, r)
+	// filesize and error
+
+}
+
 func (s *Store) Read(key string) (int64, io.Reader, error) {
 
 	return s.readStream(key)
@@ -130,19 +154,8 @@ func (s *Store) readStream(key string) (int64, io.ReadCloser, error) {
 	return fi.Size(), file, nil
 }
 
-func (s *Store) WriteDecrypt(encKey []byte, key string, r io.Reader) (int64, error) {
-	// filesize and error
-	f, err := s.openFileForWriting(key)
-	if err != nil {
-		return 0, err
-	}
-	n, err := copyDecrypt(encKey, r, f)
-
-	return int64(n), err
-
-}
-
 func (s *Store) openFileForWriting(key string) (*os.File, error) {
+	// anything that calls this should defer file.close!
 
 	pathKey := s.PathTransformFunc(key)
 	pathNameWithRoot := fmt.Sprintf("%s/%s", s.Root, pathKey.PathName)
@@ -153,17 +166,5 @@ func (s *Store) openFileForWriting(key string) (*os.File, error) {
 
 	fullpathWithRoot := fmt.Sprintf("%s/%s", s.Root, pathKey.FullPath())
 	return os.Create(fullpathWithRoot)
-
-}
-
-func (s *Store) writeStream(key string, r io.Reader) (int64, error) {
-	f, err := s.openFileForWriting(key)
-	if err != nil {
-		return 0, err
-	}
-	defer f.Close() // --------- ADDED
-
-	return io.Copy(f, r)
-	// filesize and error
 
 }

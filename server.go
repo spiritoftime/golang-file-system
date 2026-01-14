@@ -41,16 +41,6 @@ func NewFileServer(opts FileServerOpts) *FileServer {
 	}
 }
 
-func (s *FileServer) stream(msg *Message) error {
-	peers := []io.Writer{}
-
-	for _, peer := range s.peers {
-		peers = append(peers, peer)
-	}
-	mw := io.MultiWriter(peers...)
-	return gob.NewEncoder(mw).Encode(msg)
-}
-
 func (s *FileServer) broadcast(msg *Message) error {
 	buf := new(bytes.Buffer) // use for gob -encoded data
 	if err := gob.NewEncoder(buf).Encode(msg); err != nil {
@@ -142,17 +132,19 @@ func (s *FileServer) Store(key string, r io.Reader) error {
 
 	time.Sleep(50 * time.Microsecond)
 
-	// TODO: use a multiwriter here
+	peers := []io.Writer{}
 	for _, peer := range s.peers {
-		// stream the file for storage
-		peer.Send([]byte{p2p.IncomingStream})
-		n, err := copyEncrypt(s.EncKey, fileBuffer, peer)
-		// n, err := io.Copy(peer, fileBuffer) // ----------------------------use copyEncrypt here
-		if err != nil {
-			return err
-		}
-		fmt.Println("received and written bytes to disk:", n)
+		peers = append(peers, peer)
 	}
+	mw := io.MultiWriter(peers...)
+	mw.Write([]byte{p2p.IncomingStream})
+	n, err := copyEncrypt(s.EncKey, fileBuffer, mw)
+
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("[%s] received and written (%d) bytes to disk:", s.Transport.Addr(), n)
 
 	return nil
 
@@ -166,7 +158,7 @@ func (s *FileServer) OnPeer(peer p2p.Peer) error {
 	s.peerLock.Lock()
 	defer s.peerLock.Unlock()
 	s.peers[peer.RemoteAddr().String()] = peer
-	fmt.Printf("connected with remote %s", peer.RemoteAddr().String())
+	fmt.Printf("connected with remote %s\n", peer.RemoteAddr().String())
 	return nil
 }
 
@@ -275,12 +267,13 @@ func (s *FileServer) handleMessageStoreFile(from string, msg MessageStoreFile) e
 // Peer ↔ Peer
 // (peers connect directly to each other)
 func (s *FileServer) bootstrapNetwork() error {
+	// should add waitgroups so that we can ensure each peer is bootstrapped within network before proceeding
 	for _, addr := range s.BootstrapNodes {
 		if len(addr) == 0 { // someone passed in ""
 			continue
 		}
 		go func(addr string) {
-
+			fmt.Printf("[%s] attempting to connect with remote: %s\n", s.Transport.Addr(), addr)
 			if err := s.Transport.Dial(addr); err != nil {
 				log.Println("dial error: ", err)
 
@@ -291,6 +284,7 @@ func (s *FileServer) bootstrapNetwork() error {
 }
 
 func (s *FileServer) Start() error {
+	fmt.Printf("[%s] starting fileserver....\n", s.Transport.Addr())
 	if err := s.Transport.ListenAndAccept(); err != nil {
 		return err
 	}
@@ -300,7 +294,3 @@ func (s *FileServer) Start() error {
 	s.loop()
 	return nil
 }
-
-// func (s *FileServer) Store(key string, r io.Reader) (int64, error) {
-// 	return s.store.Write(key, r)
-// }

@@ -47,30 +47,41 @@ func init() {
 	gob.Register(MessageGetFile{})
 }
 func main() {
-	key := "coolPicture.jpg"
 	s1 := makeServer(":3000", "")
-	s2 := makeServer(":4000", ":3000")
+	s2 := makeServer(":7000", ":3000")
+	// todo: implement automatic peer discovery
+	s3 := makeServer(":5000", ":3000", ":7000")
+
 	go func() {
 		log.Fatal(s1.Start())
 	}()
-	time.Sleep(2 * time.Second)
-	go s2.Start()
-	time.Sleep(2 * time.Second)
-	data := bytes.NewReader([]byte("my big data file here"))
-	s2.Store(key, data)
-	time.Sleep(200 * time.Millisecond)
+	go func() { //need separate go routines because .Start has a accept loop so it will never run
 
-	if err := s2.store.Delete(key); err != nil {
-		log.Fatal(err)
+		log.Fatal(s2.Start())
+	}()
+	time.Sleep(4 * time.Second)
+	go s3.Start()
+	time.Sleep(2 * time.Second) //if no sleep store will run and broadcast will be attempted before server even starts
+
+	for i := 0; i < 20; i++ {
+
+		// key := "coolPicture.jpg"
+		key := fmt.Sprintf("picture_%d.png", i)
+		data := bytes.NewReader([]byte("my big data file here"))
+		s3.Store(key, data)
+		time.Sleep(200 * time.Millisecond)
+		if err := s3.store.Delete(key); err != nil {
+			log.Fatal(err)
+		}
+		// -----------get file
+		r, err := s3.Get(key)
+		if err != nil {
+			log.Fatal(err)
+		}
+		b, err := io.ReadAll(r)
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Println(string(b))
 	}
-	// -----------get file
-	r, err := s2.Get(key)
-	if err != nil {
-		log.Fatal(err)
-	}
-	b, err := io.ReadAll(r)
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println(string(b))
 }

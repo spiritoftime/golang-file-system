@@ -80,7 +80,7 @@ func (s *FileServer) Get(key string) (io.Reader, error) {
 
 	msg := Message{
 		Payload: MessageGetFile{
-			Key: key,
+			Key: hashKey(key),
 		},
 	}
 	// fetch from all peers to see if they have
@@ -122,7 +122,7 @@ func (s *FileServer) Store(key string, r io.Reader) error {
 	}
 	msg := Message{
 		Payload: MessageStoreFile{
-			Key:  key,
+			Key:  hashKey(key),
 			Size: size + 16, //add the iv from encoding
 		},
 	}

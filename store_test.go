@@ -59,6 +59,12 @@ func TestStore(t *testing.T) {
 		}
 
 		b, _ := io.ReadAll(r)
+		// CRITICAL: Close the reader before attempting to delete
+		if closer, ok := r.(io.Closer); ok {
+			if err := closer.Close(); err != nil {
+				t.Error(err)
+			}
+		}
 
 		fmt.Println(string(b))
 		if string(b) != string(data) {

@@ -28,6 +28,7 @@ func makeServer(listenAddr string, nodes ...string) *FileServer {
 	}
 	tcpTransport := p2p.NewTCPTransport(tcpTransportOpts)
 	fileServerOpts := FileServerOpts{
+		EncKey:            newEncryptionKey(),
 		StorageRoot:       strings.TrimPrefix(listenAddr, ":") + "_network", // remove the :
 		PathTransformFunc: CASPathTransformFunc,
 		Transport:         tcpTransport,
@@ -46,7 +47,7 @@ func init() {
 	gob.Register(MessageGetFile{})
 }
 func main() {
-
+	key := "coolPicture.jpg"
 	s1 := makeServer(":3000", "")
 	s2 := makeServer(":4000", ":3000")
 	go func() {
@@ -54,22 +55,16 @@ func main() {
 	}()
 	time.Sleep(2 * time.Second)
 	go s2.Start()
+	time.Sleep(2 * time.Second)
 	data := bytes.NewReader([]byte("my big data file here"))
-	s2.Store("coolPicture.jpg", data)
+	s2.Store(key, data)
+	time.Sleep(200 * time.Millisecond)
 
-	// time.Sleep(5 * time.Millisecond)
-	// for i := 0; i < 10; i++ {
-	// 	data := bytes.NewReader([]byte("my big data file here!"))
-	// 	if err := s2.Store(fmt.Sprintf("myprivatedata_%d", i), data); err != nil {
-	// 		fmt.Println(err)
-	// 	}
-	// 	//  need to sleep for http connection roundtrip
-	// 	time.Sleep(5 * time.Millisecond)
-
-	// }
-	// time.Sleep(10 * time.Second)
-	// ------------------------------- get file
-	r, err := s1.Get("coolPicture.jpg")
+	if err := s2.store.Delete(key); err != nil {
+		log.Fatal(err)
+	}
+	// -----------get file
+	r, err := s2.Get(key)
 	if err != nil {
 		log.Fatal(err)
 	}

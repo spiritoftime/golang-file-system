@@ -11,6 +11,10 @@ import (
 	"strings"
 )
 
+// possible to add uuid so that u can just sync a peer's files when it is needed
+// filename => clown.jpg
+// path =>transformFunc(fileName)=>ROOT/randomstring/path
+
 const defaultRootFolderName = "ggnetwork"
 
 // content-addressable storage (CAS) path
@@ -60,6 +64,8 @@ type StoreOpts struct {
 	PathTransformFunc PathTransformFunc
 	// Root is the folder name of the root, containing all the folders/files of the system.
 	Root string
+	// ID of the owner of the storage (the peer), which will be used to store all files at that location so we can sync all the files if needed.
+	ID string
 }
 
 var DefaultPathTransformFunc = func(key string) PathKey {
@@ -80,13 +86,15 @@ func NewStore(opts StoreOpts) *Store {
 	if len(opts.Root) == 0 { // no root specified
 		opts.Root = defaultRootFolderName
 	}
-
+	if len(opts.ID) == 0 {
+		opts.ID = generateID()
+	}
 	return &Store{StoreOpts: opts}
 }
 
 func (s *Store) Has(key string) bool {
 	pathKey := s.PathTransformFunc(key)
-	fullPathWithRoot := fmt.Sprintf("%s/%s", s.Root, pathKey.FullPath())
+	fullPathWithRoot := fmt.Sprintf("%s/%s/%s", s.Root, s.ID, pathKey.FullPath())
 	_, err := os.Stat(fullPathWithRoot)
 
 	return !errors.Is(err, os.ErrNotExist)
@@ -101,7 +109,7 @@ func (s *Store) Delete(key string) error {
 	defer func() {
 		log.Printf("deleted [%s] from disk", pathKey.Filename)
 	}()
-	firstPathNameWithRoot := fmt.Sprintf("%s/%s", s.Root, pathKey.FirstPathName())
+	firstPathNameWithRoot := fmt.Sprintf("%s/%s/%s", s.Root, s.ID, pathKey.FirstPathName())
 	return os.RemoveAll(firstPathNameWithRoot)
 }
 
@@ -141,7 +149,7 @@ func (s *Store) Read(key string) (int64, io.Reader, error) {
 
 func (s *Store) readStream(key string) (int64, io.ReadCloser, error) {
 	pathKey := s.PathTransformFunc(key)
-	pathKeyWithRoot := fmt.Sprintf("%s/%s", s.Root, pathKey.FullPath())
+	pathKeyWithRoot := fmt.Sprintf("%s/%s/%s", s.Root, s.ID, pathKey.FullPath())
 	file, err := os.Open(pathKeyWithRoot)
 	if err != nil {
 		return 0, nil, err
@@ -158,13 +166,13 @@ func (s *Store) openFileForWriting(key string) (*os.File, error) {
 	// anything that calls this should defer file.close!
 
 	pathKey := s.PathTransformFunc(key)
-	pathNameWithRoot := fmt.Sprintf("%s/%s", s.Root, pathKey.PathName)
+	pathNameWithRoot := fmt.Sprintf("%s/%s/%s", s.Root, s.ID, pathKey.PathName)
 
 	if err := os.MkdirAll(pathNameWithRoot, os.ModePerm); err != nil {
 		return nil, err
 	}
 
-	fullpathWithRoot := fmt.Sprintf("%s/%s", s.Root, pathKey.FullPath())
+	fullpathWithRoot := fmt.Sprintf("%s/%s/%s", s.Root, s.ID, pathKey.FullPath())
 	return os.Create(fullpathWithRoot)
 
 }

@@ -114,6 +114,7 @@ func (s *FileServer) Get(key string) (io.Reader, error) {
 	return r, err
 }
 
+// HOMEWORK: be able to remove a file on all peers
 func (s *FileServer) Remove() {
 
 }
